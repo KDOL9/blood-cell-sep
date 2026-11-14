@@ -20,6 +20,7 @@ ARCHIVE_PATH = RAW_DIR / "bbbc041seg.zip"
 EXTRACT_DIR = RAW_DIR / "bbbc041seg"
 
 GDRIVE_FILE_ID = "1nG-ra6BPAZSTsdYCvedzCo-JLD7jdH71"
+MAX_ATTEMPTS = 20
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 
@@ -31,8 +32,28 @@ def download_archive():
         return
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    print("Скачиваю архив с Google Drive (около 2 ГБ)...")
-    gdown.download(id=GDRIVE_FILE_ID, output=str(ARCHIVE_PATH), quiet=False)
+    print("Скачиваю архив с Google Drive (около 2.3 ГБ)...")
+
+    # Google Drive часто обрывает большие загрузки.
+    # resume=True — продолжить с места обрыва (недокачанный кусок хранится в .part),
+    # retries — сколько раз gdown сам переподключается внутри одной попытки.
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            gdown.download(
+                id=GDRIVE_FILE_ID,
+                output=str(ARCHIVE_PATH),
+                quiet=False,
+                resume=True,
+                retries=10,
+            )
+            return
+        except gdown.exceptions.DownloadError as error:
+            print("Попытка", attempt, "из", MAX_ATTEMPTS, "оборвалась:", error)
+
+    raise RuntimeError(
+        "Не удалось скачать архив. Запусти скрипт ещё раз — загрузка продолжится "
+        "с того же места, — или скачай файл вручную и положи как " + str(ARCHIVE_PATH)
+    )
 
 
 def extract_archive():
