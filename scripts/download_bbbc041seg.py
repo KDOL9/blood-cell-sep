@@ -154,8 +154,13 @@ def print_summary():
 
 
 def main():
-    download_archive()
-    extract_archive()
+    # Если датасет уже распакован (например, браузер сам распаковал zip),
+    # архив не нужен — сразу печатаем сводку
+    if EXTRACT_DIR.exists():
+        print("Датасет уже распакован:", EXTRACT_DIR)
+    else:
+        download_archive()
+        extract_archive()
     print_summary()
 
 
