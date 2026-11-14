@@ -1,0 +1,29 @@
+{
+  "images": 1328,
+  "image_sizes": [
+    [
+      1200,
+      1600
+    ],
+    [
+      1383,
+      1944
+    ]
+  ],
+  "cells_total": 93571,
+  "cells_per_image_mean": 70.5,
+  "cells_per_image_min": 10,
+  "cells_per_image_max": 191,
+  "cell_area_median_px": 7899.0,
+  "clumps_total": 13972,
+  "images_with_clumps": 1310,
+  "cells_in_clumps_share": 0.56,
+  "suspected_merged_regions": 747,
+  "images_with_suspected_merges": 410,
+  "settings": {
+    "min_area": 200,
+    "touch_distance": 2,
+    "merge_factor": 1.6,
+    "max_solidity": 0.9
+  }
+}
