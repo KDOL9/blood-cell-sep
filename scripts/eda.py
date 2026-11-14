@@ -22,21 +22,27 @@ matplotlib.use("Agg")  # рисуем в файлы, без окон
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import ndimage as ndi
-from skimage.measure import regionprops
 from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.data_io import list_pairs, load_image, load_mask, mask_to_instances
+from src.data_io import (
+    MAX_SOLIDITY,
+    MERGE_FACTOR,
+    border_labels,
+    find_suspected_merges,
+    list_pairs,
+    load_image,
+    load_mask,
+    mask_to_instances,
+)
 
 DATA_ROOT = ROOT / "data" / "raw" / "bbbc041seg"
 OUT_DIR = ROOT / "results" / "eda"
 
 MIN_AREA = 200          # области меньше — шум, а не клетки
 TOUCH_DISTANCE = 2      # клетки ближе этого числа пикселей считаем касающимися
-MERGE_FACTOR = 1.6      # область больше медианы клеток своего снимка в 1.6 раза...
-MAX_SOLIDITY = 0.9      # ...и при этом заметно невыпуклая — подозрение на слияние
 N_EXAMPLES = 6          # сколько примеров сохранить картинками
 
 
@@ -96,14 +102,6 @@ def group_into_clumps(count, pairs):
     return clumps
 
 
-def touches_border(labels):
-    """Номера клеток, касающихся края снимка."""
-    edge = np.concatenate([labels[0, :], labels[-1, :], labels[:, 0], labels[:, -1]])
-    result = set(np.unique(edge).tolist())
-    result.discard(0)
-    return result
-
-
 def save_example(stem, image, labels, highlight, title, path):
     """Сохраняет снимок рядом с маской, где выделенные клетки покрашены красным."""
     overlay = np.zeros(labels.shape + (3,), dtype=np.uint8)
@@ -146,7 +144,7 @@ def main():
         for clump in clumps:
             cells_in_clumps += len(clump)
 
-        border_cells = touches_border(labels)
+        border_cells = border_labels(labels)
 
         per_image[stem] = {
             "areas": areas,
@@ -169,27 +167,12 @@ def main():
     all_areas = np.array(all_areas)
     median_area = float(np.median(all_areas))
 
-    # Проход 2: подозрительные области — вероятно, слитые клетки.
-    # Сравниваем с медианой ЭТОГО снимка, а не всего датасета:
-    # снимки сняты в разном масштабе, и на одних все клетки крупнее, чем на других.
-    # Плюс проверяем выпуклость (solidity = площадь / площадь выпуклой оболочки):
-    # одна клетка почти выпуклая (~0.95), две слипшиеся — «восьмёрка» с перетяжкой (ниже).
+    # Проход 2: подозрительные области — вероятно, слитые клетки (см. src/data_io.py)
     suspected_total = 0
     for row in rows:
         info = per_image[row["stem"]]
-        image_median = float(np.median(info["areas"]))
         labels, _ = mask_to_instances(load_mask(info["mask_path"]), min_area=MIN_AREA)
-        props = regionprops(labels)
-
-        suspected = []
-        for prop in props:
-            cell = prop.label
-            if cell in info["border"]:
-                continue
-            is_big = prop.area > MERGE_FACTOR * image_median
-            is_concave = prop.solidity < MAX_SOLIDITY
-            if is_big and is_concave:
-                suspected.append(cell)
+        suspected = find_suspected_merges(labels)
         info["suspected"] = suspected
         row["suspected_merges"] = len(suspected)
         suspected_total += len(suspected)

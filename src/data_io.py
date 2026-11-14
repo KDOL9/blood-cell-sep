@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
+from skimage.measure import regionprops
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 
@@ -88,3 +89,45 @@ def mask_to_instances(mask, min_area=0):
         labels, count = ndi.label(labels > 0, structure=FOUR_CONNECTIVITY)
 
     return labels.astype(np.int32), count
+
+
+# Параметры поиска слитых клеток (ошибок разметки, где порвалась разделительная линия)
+MERGE_FACTOR = 1.6   # площадь больше медианы клеток своего снимка в 1.6 раза...
+MAX_SOLIDITY = 0.9   # ...и область заметно невыпуклая
+
+
+def border_labels(labels):
+    """Номера клеток, касающихся края снимка."""
+    edge = np.concatenate([labels[0, :], labels[-1, :], labels[:, 0], labels[:, -1]])
+    result = set(np.unique(edge).tolist())
+    result.discard(0)
+    return result
+
+
+def find_suspected_merges(labels):
+    """Номера областей, которые, вероятно, являются слитыми клетками.
+
+    Сравниваем площадь с медианой ЭТОГО снимка (снимки сняты в разном масштабе)
+    и проверяем выпуклость: solidity = площадь / площадь выпуклой оболочки.
+    Одна клетка почти выпуклая (~0.95), две слипшиеся — «восьмёрка» с перетяжкой.
+    Клетки у края снимка пропускаем: они обрезаны, и их форма ничего не говорит.
+    """
+    props = regionprops(labels)
+    if len(props) == 0:
+        return []
+
+    areas = []
+    for prop in props:
+        areas.append(prop.area)
+    image_median = float(np.median(areas))
+
+    border = border_labels(labels)
+    suspected = []
+    for prop in props:
+        if prop.label in border:
+            continue
+        is_big = prop.area > MERGE_FACTOR * image_median
+        is_concave = prop.solidity < MAX_SOLIDITY
+        if is_big and is_concave:
+            suspected.append(prop.label)
+    return suspected
