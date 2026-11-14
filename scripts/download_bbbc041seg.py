@@ -25,6 +25,28 @@ MAX_ATTEMPTS = 20
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 
 
+def keep_largest_partial_file():
+    """Оставляет только самый большой недокачанный .part-файл.
+
+    gdown умеет продолжать загрузку только если такой файл ровно один.
+    Если их несколько (после обрывов), самый большой — тот, где скачано больше всего.
+    """
+    pattern = ARCHIVE_PATH.name + "*.part"
+    partial_files = list(RAW_DIR.glob(pattern))
+    if len(partial_files) <= 1:
+        return
+
+    largest = partial_files[0]
+    for path in partial_files:
+        if path.stat().st_size > largest.stat().st_size:
+            largest = path
+
+    for path in partial_files:
+        if path != largest:
+            print("Удаляю лишний недокачанный файл:", path.name)
+            path.unlink()
+
+
 def download_archive():
     """Скачивает архив, если его ещё нет на диске."""
     if ARCHIVE_PATH.exists():
@@ -38,6 +60,7 @@ def download_archive():
     # resume=True — продолжить с места обрыва (недокачанный кусок хранится в .part),
     # retries — сколько раз gdown сам переподключается внутри одной попытки.
     for attempt in range(1, MAX_ATTEMPTS + 1):
+        keep_largest_partial_file()
         try:
             gdown.download(
                 id=GDRIVE_FILE_ID,
