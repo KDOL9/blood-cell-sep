@@ -6,6 +6,7 @@ scipy
 pandas
 pyyaml
 tqdm
+gdown
 
 # Работа с изображениями
 opencv-python
