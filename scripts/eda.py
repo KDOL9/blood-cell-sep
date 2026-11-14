@@ -22,6 +22,7 @@ matplotlib.use("Agg")  # рисуем в файлы, без окон
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import ndimage as ndi
+from skimage.measure import regionprops
 from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,7 +35,8 @@ OUT_DIR = ROOT / "results" / "eda"
 
 MIN_AREA = 200          # области меньше — шум, а не клетки
 TOUCH_DISTANCE = 2      # клетки ближе этого числа пикселей считаем касающимися
-MERGE_FACTOR = 1.8      # область больше медианы клетки в 1.8 раза — подозрение на слияние
+MERGE_FACTOR = 1.6      # область больше медианы клеток своего снимка в 1.6 раза...
+MAX_SOLIDITY = 0.9      # ...и при этом заметно невыпуклая — подозрение на слияние
 N_EXAMPLES = 6          # сколько примеров сохранить картинками
 
 
@@ -166,16 +168,27 @@ def main():
 
     all_areas = np.array(all_areas)
     median_area = float(np.median(all_areas))
-    merge_threshold = MERGE_FACTOR * median_area
 
-    # Проход 2: подозрительно большие области (не у края — у края клетки бывают обрезаны)
+    # Проход 2: подозрительные области — вероятно, слитые клетки.
+    # Сравниваем с медианой ЭТОГО снимка, а не всего датасета:
+    # снимки сняты в разном масштабе, и на одних все клетки крупнее, чем на других.
+    # Плюс проверяем выпуклость (solidity = площадь / площадь выпуклой оболочки):
+    # одна клетка почти выпуклая (~0.95), две слипшиеся — «восьмёрка» с перетяжкой (ниже).
     suspected_total = 0
     for row in rows:
         info = per_image[row["stem"]]
+        image_median = float(np.median(info["areas"]))
+        labels, _ = mask_to_instances(load_mask(info["mask_path"]), min_area=MIN_AREA)
+        props = regionprops(labels)
+
         suspected = []
-        for index, area in enumerate(info["areas"]):
-            cell = index + 1
-            if area > merge_threshold and cell not in info["border"]:
+        for prop in props:
+            cell = prop.label
+            if cell in info["border"]:
+                continue
+            is_big = prop.area > MERGE_FACTOR * image_median
+            is_concave = prop.solidity < MAX_SOLIDITY
+            if is_big and is_concave:
                 suspected.append(cell)
         info["suspected"] = suspected
         row["suspected_merges"] = len(suspected)
@@ -212,6 +225,7 @@ def main():
             "min_area": MIN_AREA,
             "touch_distance": TOUCH_DISTANCE,
             "merge_factor": MERGE_FACTOR,
+            "max_solidity": MAX_SOLIDITY,
         },
     }
     with open(OUT_DIR / "summary.json", "w") as f:
@@ -223,10 +237,8 @@ def main():
     axes[0].set_xlabel("Клеток на снимке")
     axes[0].set_ylabel("Снимков")
     axes[1].hist(all_areas, bins=80, range=(0, 4 * median_area), color="#4C72B0")
-    axes[1].axvline(merge_threshold, color="#C44E52", linestyle="--", label="порог слияния")
     axes[1].set_xlabel("Площадь области, пикселей")
     axes[1].set_ylabel("Областей")
-    axes[1].legend()
     fig.tight_layout()
     fig.savefig(OUT_DIR / "distributions.png", dpi=110)
     plt.close(fig)
