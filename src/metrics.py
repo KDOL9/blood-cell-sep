@@ -167,6 +167,7 @@ def aggregate_stats(stats_list):
         "merged_gt": 0, "split_gt": 0, "dice_inter": 0, "dice_total": 0,
     }
     count_errors = []
+    aji_per_image = []
 
     for s in stats_list:
         tp += s["tp"]
@@ -176,6 +177,8 @@ def aggregate_stats(stats_list):
             totals[key] += s[key]
         if s["n_gt"] > 0:
             count_errors.append(abs(s["n_pred"] - s["n_gt"]) / s["n_gt"])
+        if s["aji_union"] > 0:
+            aji_per_image.append(s["aji_inter"] / s["aji_union"])
 
     def safe_div(a, b):
         if b == 0:
@@ -190,6 +193,13 @@ def aggregate_stats(stats_list):
     ap_per_threshold = []
     for k in range(len(IOU_THRESHOLDS)):
         ap_per_threshold.append(safe_div(tp[k], tp[k] + fp[k] + fn[k]))
+
+    # AJI считаем по каждому снимку и усредняем (как принято в литературе).
+    # Сумма по всем снимкам сразу дала бы огромный вес нескольким плотным
+    # снимкам, где одно гигантское пятно накрывает сотню клеток.
+    aji = 0.0
+    if len(aji_per_image) > 0:
+        aji = float(np.mean(aji_per_image))
 
     count_error = 0.0
     if len(count_errors) > 0:
@@ -208,7 +218,8 @@ def aggregate_stats(stats_list):
         "f1@0.75": round(safe_div(2 * tp[i75], 2 * tp[i75] + fp[i75] + fn[i75]), 4),
         "ap@0.5": round(ap_per_threshold[i50], 4),
         "ap@[0.5:0.95]": round(float(np.mean(ap_per_threshold)), 4),
-        "aji": round(safe_div(totals["aji_inter"], totals["aji_union"]), 4),
+        "aji": round(aji, 4),
+        "aji_pooled": round(safe_div(totals["aji_inter"], totals["aji_union"]), 4),
         "merge_rate": round(safe_div(totals["merged_gt"], totals["n_gt"]), 4),
         "split_rate": round(safe_div(totals["split_gt"], totals["n_gt"]), 4),
         "count_error": round(count_error, 4),
