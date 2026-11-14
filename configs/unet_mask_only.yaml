@@ -1,0 +1,23 @@
+# Бейзлайн: тот же U-Net, но учится только маске «клетка/фон».
+# Клетки = связные области маски, слипшиеся клетки не разделяются.
+run_name: unet_mask_only
+seed: 42
+
+model:
+  encoder: resnet34
+  pretrained: true
+
+loss:
+  dist_weight: 0.0       # карта расстояний не обучается
+
+postprocess: components  # каждое пятно маски = одна клетка
+
+train:
+  epochs: 60
+  batch_size: 8
+  crop_size: 512
+  samples_per_image: 4
+  lr: 0.0003
+  weight_decay: 0.0001
+  num_workers: 8
+  val_every: 5

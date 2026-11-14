@@ -3,6 +3,7 @@
 Запуск из корня репозитория:
     python scripts/evaluate.py --method otsu_watershed --split test
     python scripts/evaluate.py --method otsu_components --split test --limit 20
+    python scripts/evaluate.py --method model --checkpoint checkpoints/unet_dist/best.pth --split test
 
 Результаты: results/metrics/<method>_<split>.json и .csv (по снимкам).
 Пара примеров с наложением предсказания: results/metrics/examples/.
@@ -29,6 +30,9 @@ sys.path.insert(0, str(ROOT))
 from baselines.classical import METHODS
 from src.data_io import find_suspected_merges, list_pairs, load_image, load_mask, mask_to_instances
 from src.metrics import aggregate_stats, image_stats
+from src.model import load_checkpoint
+from src.predict import segment
+from src.utils import get_device
 
 DATA_ROOT = ROOT / "data" / "raw" / "bbbc041seg"
 SPLIT_PATH = ROOT / "configs" / "split_bbbc041seg.json"
@@ -61,7 +65,8 @@ def save_example(stem, image, gt, pred, path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--method", required=True, choices=sorted(METHODS))
+    parser.add_argument("--method", required=True, choices=sorted(METHODS) + ["model"])
+    parser.add_argument("--checkpoint", default="", help="путь к чекпоинту (для --method model)")
     parser.add_argument("--split", default="test", choices=["train", "val", "test"])
     parser.add_argument("--limit", type=int, default=0, help="взять только первые N снимков (для быстрой проверки)")
     args = parser.parse_args()
@@ -76,7 +81,18 @@ def main():
     if args.limit > 0:
         pairs = pairs[:args.limit]
 
-    method = METHODS[args.method]
+    method_name = args.method
+    if args.method == "model":
+        if args.checkpoint == "":
+            parser.error("для --method model нужен --checkpoint")
+        device = get_device()
+        model, config = load_checkpoint(args.checkpoint, device)
+        method_name = config["run_name"]
+
+        def method(image):
+            return segment(model, image, device, postprocess=config["postprocess"])
+    else:
+        method = METHODS[args.method]
     out_dir = OUT_DIR
     examples_dir = OUT_DIR / "examples"
     examples_dir.mkdir(parents=True, exist_ok=True)
@@ -85,7 +101,7 @@ def main():
     rows = []
     start = time.time()
 
-    for index, (stem, image_path, mask_path) in enumerate(tqdm(pairs, desc=args.method)):
+    for index, (stem, image_path, mask_path) in enumerate(tqdm(pairs, desc=method_name)):
         image = load_image(image_path)
         gt, _ = mask_to_instances(load_mask(mask_path), min_area=GT_MIN_AREA)
         ignore_ids = find_suspected_merges(gt)
@@ -105,15 +121,15 @@ def main():
 
         if index < N_EXAMPLES:
             save_example(stem, image, gt, pred,
-                         examples_dir / (args.method + "_" + str(index) + ".png"))
+                         examples_dir / (method_name + "_" + str(index) + ".png"))
 
     elapsed = time.time() - start
     metrics = aggregate_stats(stats_list)
-    metrics["method"] = args.method
+    metrics["method"] = method_name
     metrics["split"] = args.split
     metrics["seconds_per_image"] = round(elapsed / max(1, len(pairs)), 3)
 
-    name = args.method + "_" + args.split
+    name = method_name + "_" + args.split
     with open(out_dir / (name + ".json"), "w") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
     with open(out_dir / (name + ".csv"), "w", newline="") as f:

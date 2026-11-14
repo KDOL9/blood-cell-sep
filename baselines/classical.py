@@ -30,7 +30,7 @@ def foreground_mask(image):
     mask = ndi.binary_fill_holes(mask)
     # Размыкание убирает тонкие «мостики» и мелкий мусор
     mask = binary_opening(mask, disk(3))
-    mask = remove_small_objects(mask, min_size=MIN_AREA)
+    mask = remove_small_objects(mask, max_size=MIN_AREA - 1)
     return mask
 
 
