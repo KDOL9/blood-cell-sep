@@ -1,0 +1,23 @@
+# --- Данные и артефакты обучения (тяжёлые, в git не кладём) ---
+data/*
+!data/README.md
+checkpoints/
+runs/
+*.pth
+*.pt
+*.ckpt
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- IDE и системные файлы ---
+.vscode/
+.idea/
+.DS_Store

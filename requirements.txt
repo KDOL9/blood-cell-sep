@@ -1,0 +1,21 @@
+# PyTorch ставится отдельно (разные команды для Mac и для ПК с CUDA) — см. README.
+
+# Базовые вычисления и данные
+numpy
+scipy
+pandas
+pyyaml
+tqdm
+
+# Работа с изображениями
+opencv-python
+scikit-image
+matplotlib
+
+# Нейросети
+segmentation-models-pytorch
+albumentations
+tensorboard
+
+# Ноутбуки
+jupyter
