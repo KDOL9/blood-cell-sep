@@ -132,7 +132,8 @@ def main():
     writer = SummaryWriter(str(ROOT / "runs" / run_name))
 
     train_set = CellDataset(load_split_pairs("train"), crop_size=config["train"]["crop_size"],
-                            train=True, samples_per_image=config["train"]["samples_per_image"])
+                            train=True, samples_per_image=config["train"]["samples_per_image"],
+                            synthetic=config.get("synthetic"))
     val_set = CellDataset(load_split_pairs("val"), train=False)
     print("train снимков:", len(train_set.pairs), "| val снимков:", len(val_set.pairs))
 

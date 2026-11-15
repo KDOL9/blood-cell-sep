@@ -10,6 +10,7 @@ import torch
 from torch.utils.data import Dataset
 
 from src.data_io import find_suspected_merges, load_image, load_mask, mask_to_instances
+from src.synthetic import add_synthetic_clumps
 from src.targets import make_targets
 
 GT_MIN_AREA = 200
@@ -49,9 +50,11 @@ def normalize_image(image):
 class CellDataset(Dataset):
     """pairs — список (stem, путь к снимку, путь к маске)."""
 
-    def __init__(self, pairs, crop_size=512, train=True, samples_per_image=1):
+    def __init__(self, pairs, crop_size=512, train=True, samples_per_image=1, synthetic=None):
         self.pairs = pairs
         self.train = train
+        # synthetic — словарь из конфига: {"enabled": ..., "prob": ..., "min_cells": ..., "max_cells": ...}
+        self.synthetic = synthetic
         # Снимок большой, а кроп маленький: за эпоху берём из каждого снимка несколько кропов
         self.samples_per_image = samples_per_image
         self.augment = None
@@ -61,19 +64,42 @@ class CellDataset(Dataset):
     def __len__(self):
         return len(self.pairs) * self.samples_per_image
 
-    def load(self, index):
-        """Снимок и целевые карты для одного снимка целиком."""
+    def load_raw(self, index):
+        """Снимок, маска экземпляров и номера ненадёжных клеток."""
         stem, image_path, mask_path = self.pairs[index % len(self.pairs)]
         image = load_image(image_path)
         labels, _ = mask_to_instances(load_mask(mask_path), min_area=GT_MIN_AREA)
         ignore_ids = find_suspected_merges(labels)
-        # Цели считаем на ЦЕЛОМ снимке и только потом режем кроп:
-        # иначе у клеток, обрезанных краем кропа, карта расстояний была бы неправильной
+        return stem, image, labels, ignore_ids
+
+    def load(self, index):
+        """Снимок и целевые карты для одного снимка целиком (без синтетики — для валидации)."""
+        stem, image, labels, ignore_ids = self.load_raw(index)
         fg, dist, valid = make_targets(labels, ignore_ids)
         return stem, image, labels, fg, dist, valid
 
+    def use_synthetic(self):
+        if not self.train or self.synthetic is None:
+            return False
+        if not self.synthetic.get("enabled", False):
+            return False
+        # Случайность берём из torch: у каждого процесса-загрузчика свой seed
+        return float(torch.rand(1)) < self.synthetic["prob"]
+
     def __getitem__(self, index):
-        stem, image, labels, fg, dist, valid = self.load(index)
+        stem, image, labels, ignore_ids = self.load_raw(index)
+
+        if self.use_synthetic():
+            rng = np.random.default_rng(int(torch.randint(0, 2**31 - 1, (1,))))
+            image, labels, ignore_ids = add_synthetic_clumps(
+                image, labels, ignore_ids, rng,
+                min_cells=self.synthetic["min_cells"],
+                max_cells=self.synthetic["max_cells"],
+            )
+
+        # Цели считаем на ЦЕЛОМ снимке и только потом режем кроп:
+        # иначе у клеток, обрезанных краем кропа, карта расстояний была бы неправильной
+        fg, dist, valid = make_targets(labels, ignore_ids)
 
         if self.augment is not None:
             out = self.augment(image=image, masks=[fg, dist, valid])

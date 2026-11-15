@@ -36,8 +36,25 @@ def normalized_distance(labels):
     return normalized.astype(np.float32)
 
 
+def separate_touching(labels):
+    """Проводит линию фона толщиной 1 пиксель между касающимися клетками.
+
+    В исходной разметке такие линии уже есть. Но после вставки синтетических
+    клеток (src/synthetic.py) новые клетки прилегают к старым вплотную,
+    и без разделительной линии их «холмы» на карте расстояний слились бы в один.
+    Пиксель становится линией, если рядом есть клетка с БОЛЬШИМ номером —
+    так линия получается толщиной ровно 1 пиксель, а не 2.
+    """
+    neighbor_max = ndi.maximum_filter(labels, size=3)
+    boundary = (labels > 0) & (neighbor_max > labels)
+    separated = labels.copy()
+    separated[boundary] = 0
+    return separated
+
+
 def make_targets(labels, ignore_ids=()):
     """Строит fg, dist и valid из маски экземпляров."""
+    labels = separate_touching(labels)
     fg = (labels > 0).astype(np.uint8)
     dist = normalized_distance(labels)
 

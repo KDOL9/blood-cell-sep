@@ -68,6 +68,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", required=True, choices=sorted(METHODS) + ["model"])
     parser.add_argument("--checkpoint", default="", help="путь к чекпоинту (для --method model)")
+    parser.add_argument("--exclude-border", action="store_true",
+                        help="не учитывать клетки, касающиеся края снимка (и в разметке, и в предсказании)")
     parser.add_argument("--tuned", action="store_true",
                         help="взять пороги постобработки, подобранные на val (results/tuning/<run>_val.json)")
     parser.add_argument("--split", default="test", choices=["train", "val", "test"])
@@ -123,7 +125,7 @@ def main():
 
         pred = method(image)
 
-        stats = image_stats(gt, pred, ignore_ids)
+        stats = image_stats(gt, pred, ignore_ids, exclude_border=args.exclude_border)
         stats_list.append(stats)
         rows.append({
             "stem": stem,
@@ -137,6 +139,9 @@ def main():
         if index < N_EXAMPLES:
             save_example(stem, image, gt, pred,
                          examples_dir / (method_name + "_" + str(index) + ".png"))
+
+    if args.exclude_border:
+        method_name = method_name + "_noborder"
 
     elapsed = time.time() - start
     metrics = aggregate_stats(stats_list)

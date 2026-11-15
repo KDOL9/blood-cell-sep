@@ -81,12 +81,29 @@ def apply_ignore(gt, pred, ignore_ids):
     return relabel(gt_clean), relabel(pred_clean)
 
 
-def image_stats(gt, pred, ignore_ids=()):
+def remove_border_objects(labels):
+    """Удаляет клетки, касающиеся края снимка.
+
+    В разметке BBBC041Seg клетки, обрезанные краем кадра, часто не размечены
+    или размечены частично, поэтому сравнение на них нечестно для любого метода.
+    """
+    edge = np.concatenate([labels[0, :], labels[-1, :], labels[:, 0], labels[:, -1]])
+    border_ids = np.unique(edge)
+    border_ids = border_ids[border_ids > 0]
+    cleaned = labels.copy()
+    cleaned[np.isin(labels, border_ids)] = 0
+    return cleaned
+
+
+def image_stats(gt, pred, ignore_ids=(), exclude_border=False):
     """Все «сырые» счётчики для одного снимка.
 
     Метрики по всему тесту потом считаются суммированием этих счётчиков
     (aggregate_stats) — так каждая клетка весит одинаково, а не каждый снимок.
     """
+    if exclude_border:
+        gt = remove_border_objects(gt)
+        pred = remove_border_objects(pred)
     gt, pred = apply_ignore(gt, pred, ignore_ids)
     inter, gt_area, pred_area = overlap_matrix(gt, pred)
     iou = iou_matrix(inter, gt_area, pred_area)

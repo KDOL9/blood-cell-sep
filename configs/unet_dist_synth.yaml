@@ -1,0 +1,28 @@
+# Наш метод + синтетические слипания (абляция: сравнить с unet_dist)
+run_name: unet_dist_synth
+seed: 42
+
+model:
+  encoder: resnet34      # энкодер, предобученный на ImageNet
+  pretrained: true
+
+loss:
+  dist_weight: 1.0       # вес лосса карты расстояний
+
+postprocess: watershed   # маркеры из карты расстояний + watershed
+
+train:
+  epochs: 60
+  batch_size: 8
+  crop_size: 512
+  samples_per_image: 4   # кропов из каждого снимка за эпоху
+  lr: 0.0003
+  weight_decay: 0.0001
+  num_workers: 8
+  val_every: 5           # валидация на целых снимках раз в 5 эпох
+
+synthetic:
+  enabled: true
+  prob: 0.5              # доля обучающих примеров, к которым добавляются синтетические клетки
+  min_cells: 3           # сколько клеток вставлять в один снимок
+  max_cells: 10
