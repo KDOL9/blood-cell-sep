@@ -81,18 +81,40 @@ def apply_ignore(gt, pred, ignore_ids):
     return relabel(gt_clean), relabel(pred_clean)
 
 
-def remove_border_objects(labels):
-    """Удаляет клетки, касающиеся края снимка.
-
-    В разметке BBBC041Seg клетки, обрезанные краем кадра, часто не размечены
-    или размечены частично, поэтому сравнение на них нечестно для любого метода.
-    """
+def border_ids(labels):
+    """Номера клеток, касающихся края снимка."""
     edge = np.concatenate([labels[0, :], labels[-1, :], labels[:, 0], labels[:, -1]])
-    border_ids = np.unique(edge)
-    border_ids = border_ids[border_ids > 0]
-    cleaned = labels.copy()
-    cleaned[np.isin(labels, border_ids)] = 0
-    return cleaned
+    ids = np.unique(edge)
+    return ids[ids > 0]
+
+
+def remove_border_objects(gt, pred):
+    """Исключает из оценки клетки у края снимка.
+
+    Клетки, обрезанные краем кадра, в BBBC041Seg размечены непоследовательно:
+    часть есть в разметке, часть нет. Поэтому:
+      - из разметки удаляем все клетки, касающиеся края;
+      - из предсказания удаляем пятно у края, только если больше половины его площади
+        НЕ лежит на оставшихся (внутренних) размеченных клетках.
+    Так удаляются неразмеченные и обрезанные клетки у края, но большое склеенное пятно,
+    которое задело край и при этом накрывает внутренние клетки, остаётся
+    и честно учитывается как склейка.
+    """
+    gt_clean = gt.copy()
+    gt_clean[np.isin(gt, border_ids(gt))] = 0
+
+    on_interior_gt = gt_clean > 0
+    pred_area = np.bincount(pred.ravel())
+    pred_on_gt = np.bincount(pred[on_interior_gt].ravel(), minlength=len(pred_area))
+
+    drop = []
+    for label in border_ids(pred):
+        if pred_on_gt[label] < 0.5 * pred_area[label]:
+            drop.append(label)
+
+    pred_clean = pred.copy()
+    pred_clean[np.isin(pred, drop)] = 0
+    return gt_clean, pred_clean
 
 
 def image_stats(gt, pred, ignore_ids=(), exclude_border=False):
@@ -102,8 +124,7 @@ def image_stats(gt, pred, ignore_ids=(), exclude_border=False):
     (aggregate_stats) — так каждая клетка весит одинаково, а не каждый снимок.
     """
     if exclude_border:
-        gt = remove_border_objects(gt)
-        pred = remove_border_objects(pred)
+        gt, pred = remove_border_objects(gt, pred)
     gt, pred = apply_ignore(gt, pred, ignore_ids)
     inter, gt_area, pred_area = overlap_matrix(gt, pred)
     iou = iou_matrix(inter, gt_area, pred_area)
