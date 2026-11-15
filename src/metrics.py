@@ -94,8 +94,8 @@ def remove_border_objects(gt, pred):
     Клетки, обрезанные краем кадра, в BBBC041Seg размечены непоследовательно:
     часть есть в разметке, часть нет. Поэтому:
       - из разметки удаляем все клетки, касающиеся края;
-      - из предсказания удаляем пятно у края, только если больше половины его площади
-        НЕ лежит на оставшихся (внутренних) размеченных клетках.
+      - из предсказания удаляем пятно у края, только если оно не накрывает больше
+        половины ни одной из оставшихся (внутренних) размеченных клеток.
     Так удаляются неразмеченные и обрезанные клетки у края, но большое склеенное пятно,
     которое задело край и при этом накрывает внутренние клетки, остаётся
     и честно учитывается как склейка.
@@ -103,13 +103,13 @@ def remove_border_objects(gt, pred):
     gt_clean = gt.copy()
     gt_clean[np.isin(gt, border_ids(gt))] = 0
 
-    on_interior_gt = gt_clean > 0
-    pred_area = np.bincount(pred.ravel())
-    pred_on_gt = np.bincount(pred[on_interior_gt].ravel(), minlength=len(pred_area))
-
+    inter, gt_area, _ = overlap_matrix(gt_clean, pred)
     drop = []
     for label in border_ids(pred):
-        if pred_on_gt[label] < 0.5 * pred_area[label]:
+        covers_interior_cell = False
+        if inter.shape[0] > 0 and label - 1 < inter.shape[1]:
+            covers_interior_cell = bool((inter[:, label - 1] > 0.5 * gt_area).any())
+        if not covers_interior_cell:
             drop.append(label)
 
     pred_clean = pred.copy()
