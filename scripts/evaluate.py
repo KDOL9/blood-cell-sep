@@ -5,6 +5,7 @@
     python scripts/evaluate.py --method otsu_components --split test --limit 20
     python scripts/evaluate.py --method model --checkpoint checkpoints/unet_dist/best.pth --split test
     python scripts/evaluate.py --method model --checkpoint checkpoints/unet_dist/best.pth --split test --tuned
+    python scripts/evaluate.py --method saved --pred-dir results/predictions/cellpose --split test
 
 Результаты: results/metrics/<method>_<split>.json и .csv (по снимкам).
 Пара примеров с наложением предсказания: results/metrics/examples/.
@@ -21,6 +22,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
 from scipy.ndimage import binary_dilation
 from skimage.segmentation import find_boundaries
 from tqdm import tqdm
@@ -66,8 +68,10 @@ def save_example(stem, image, gt, pred, path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--method", required=True, choices=sorted(METHODS) + ["model"])
+    parser.add_argument("--method", required=True, choices=sorted(METHODS) + ["model", "saved"])
     parser.add_argument("--checkpoint", default="", help="путь к чекпоинту (для --method model)")
+    parser.add_argument("--pred-dir", default="",
+                        help="папка с готовыми предсказаниями <stem>.png (для --method saved, например от Cellpose)")
     parser.add_argument("--exclude-border", action="store_true",
                         help="не учитывать клетки, касающиеся края снимка (и в разметке, и в предсказании)")
     parser.add_argument("--tuned", action="store_true",
@@ -108,6 +112,14 @@ def main():
         def method(image):
             return segment(model, image, device, postprocess=config["postprocess"],
                            fg_threshold=fg_threshold, seed_threshold=seed_threshold)
+    elif args.method == "saved":
+        if args.pred_dir == "":
+            parser.error("для --method saved нужен --pred-dir")
+        pred_dir = Path(args.pred_dir)
+        method_name = pred_dir.name
+
+        def method(image, stem):
+            return np.array(Image.open(pred_dir / (stem + ".png"))).astype(np.int32)
     else:
         method = METHODS[args.method]
     out_dir = OUT_DIR
@@ -123,7 +135,10 @@ def main():
         gt, _ = mask_to_instances(load_mask(mask_path), min_area=GT_MIN_AREA)
         ignore_ids = find_suspected_merges(gt)
 
-        pred = method(image)
+        if args.method == "saved":
+            pred = method(image, stem)
+        else:
+            pred = method(image)
 
         stats = image_stats(gt, pred, ignore_ids, exclude_border=args.exclude_border)
         stats_list.append(stats)
@@ -148,6 +163,12 @@ def main():
     metrics["method"] = method_name
     metrics["split"] = args.split
     metrics["seconds_per_image"] = round(elapsed / max(1, len(pairs)), 3)
+    if args.method == "saved":
+        # Время самого метода записано при генерации предсказаний, а не при их чтении
+        info_path = Path(args.pred_dir) / "_info.json"
+        if info_path.exists():
+            with open(info_path) as f:
+                metrics["seconds_per_image"] = json.load(f)["seconds_per_image"]
 
     name = method_name + "_" + args.split
     with open(out_dir / (name + ".json"), "w") as f:
