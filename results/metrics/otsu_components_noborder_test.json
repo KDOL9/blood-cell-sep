@@ -1,0 +1,32 @@
+{
+  "images": 199,
+  "cells_gt": 11500,
+  "cells_pred": 7677,
+  "precision@0.5": 0.8171,
+  "recall@0.5": 0.5455,
+  "f1@0.5": 0.6542,
+  "f1@0.75": 0.572,
+  "ap@0.5": 0.4861,
+  "ap@[0.5:0.95]": 0.3805,
+  "aji": 0.5002,
+  "aji_pooled": 0.097,
+  "merge_rate": 0.483,
+  "split_rate": 0.003,
+  "count_error": 0.2864,
+  "dice": 0.9133,
+  "f1_per_threshold": [
+    0.6542,
+    0.6134,
+    0.5928,
+    0.5838,
+    0.5771,
+    0.572,
+    0.5647,
+    0.5483,
+    0.4898,
+    0.2479
+  ],
+  "method": "otsu_components_noborder",
+  "split": "test",
+  "seconds_per_image": 0.472
+}

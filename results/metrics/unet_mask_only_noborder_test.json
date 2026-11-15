@@ -1,0 +1,32 @@
+{
+  "images": 199,
+  "cells_gt": 11500,
+  "cells_pred": 8333,
+  "precision@0.5": 0.8872,
+  "recall@0.5": 0.6429,
+  "f1@0.5": 0.7455,
+  "f1@0.75": 0.6681,
+  "ap@0.5": 0.5943,
+  "ap@[0.5:0.95]": 0.4918,
+  "aji": 0.601,
+  "aji_pooled": 0.1549,
+  "merge_rate": 0.3984,
+  "split_rate": 0.0003,
+  "count_error": 0.2241,
+  "dice": 0.9417,
+  "f1_per_threshold": [
+    0.7455,
+    0.7055,
+    0.685,
+    0.6771,
+    0.6713,
+    0.6681,
+    0.6646,
+    0.6558,
+    0.6245,
+    0.4605
+  ],
+  "method": "unet_mask_only_noborder",
+  "split": "test",
+  "seconds_per_image": 0.468
+}
