@@ -1,0 +1,190 @@
+{
+  "run_name": "unet_dist",
+  "postprocess": "watershed",
+  "split": "val",
+  "images": 199,
+  "best": {
+    "fg_threshold": 0.4,
+    "seed_threshold": 0.7,
+    "f1@0.5": 0.9463,
+    "precision@0.5": 0.9188,
+    "recall@0.5": 0.9755,
+    "ap@[0.5:0.95]": 0.7572,
+    "aji": 0.8807,
+    "merge_rate": 0.0134,
+    "split_rate": 0.0363
+  },
+  "false_positives_at_best": {
+    "fp": 1174,
+    "fp_border": 601,
+    "fp_small": 217,
+    "fp_no_overlap": 445
+  },
+  "table": [
+    {
+      "fg_threshold": 0.4,
+      "seed_threshold": 0.3,
+      "f1@0.5": 0.9236,
+      "precision@0.5": 0.8961,
+      "recall@0.5": 0.9528,
+      "ap@[0.5:0.95]": 0.7432,
+      "aji": 0.8714,
+      "merge_rate": 0.0586,
+      "split_rate": 0.0145
+    },
+    {
+      "fg_threshold": 0.4,
+      "seed_threshold": 0.4,
+      "f1@0.5": 0.9342,
+      "precision@0.5": 0.9006,
+      "recall@0.5": 0.9703,
+      "ap@[0.5:0.95]": 0.7567,
+      "aji": 0.8817,
+      "merge_rate": 0.0316,
+      "split_rate": 0.0206
+    },
+    {
+      "fg_threshold": 0.4,
+      "seed_threshold": 0.5,
+      "f1@0.5": 0.94,
+      "precision@0.5": 0.9052,
+      "recall@0.5": 0.9776,
+      "ap@[0.5:0.95]": 0.7601,
+      "aji": 0.8846,
+      "merge_rate": 0.0181,
+      "split_rate": 0.0259
+    },
+    {
+      "fg_threshold": 0.4,
+      "seed_threshold": 0.6,
+      "f1@0.5": 0.9438,
+      "precision@0.5": 0.9103,
+      "recall@0.5": 0.9798,
+      "ap@[0.5:0.95]": 0.7588,
+      "aji": 0.8829,
+      "merge_rate": 0.0123,
+      "split_rate": 0.0327
+    },
+    {
+      "fg_threshold": 0.4,
+      "seed_threshold": 0.7,
+      "f1@0.5": 0.9463,
+      "precision@0.5": 0.9188,
+      "recall@0.5": 0.9755,
+      "ap@[0.5:0.95]": 0.7572,
+      "aji": 0.8807,
+      "merge_rate": 0.0134,
+      "split_rate": 0.0363
+    },
+    {
+      "fg_threshold": 0.5,
+      "seed_threshold": 0.3,
+      "f1@0.5": 0.9237,
+      "precision@0.5": 0.8963,
+      "recall@0.5": 0.9528,
+      "ap@[0.5:0.95]": 0.7451,
+      "aji": 0.8725,
+      "merge_rate": 0.0586,
+      "split_rate": 0.0145
+    },
+    {
+      "fg_threshold": 0.5,
+      "seed_threshold": 0.4,
+      "f1@0.5": 0.9338,
+      "precision@0.5": 0.9003,
+      "recall@0.5": 0.97,
+      "ap@[0.5:0.95]": 0.7586,
+      "aji": 0.8828,
+      "merge_rate": 0.0316,
+      "split_rate": 0.0206
+    },
+    {
+      "fg_threshold": 0.5,
+      "seed_threshold": 0.5,
+      "f1@0.5": 0.9397,
+      "precision@0.5": 0.9049,
+      "recall@0.5": 0.9772,
+      "ap@[0.5:0.95]": 0.7621,
+      "aji": 0.8857,
+      "merge_rate": 0.0181,
+      "split_rate": 0.0259
+    },
+    {
+      "fg_threshold": 0.5,
+      "seed_threshold": 0.6,
+      "f1@0.5": 0.9436,
+      "precision@0.5": 0.9101,
+      "recall@0.5": 0.9796,
+      "ap@[0.5:0.95]": 0.7611,
+      "aji": 0.8841,
+      "merge_rate": 0.0122,
+      "split_rate": 0.0328
+    },
+    {
+      "fg_threshold": 0.5,
+      "seed_threshold": 0.7,
+      "f1@0.5": 0.946,
+      "precision@0.5": 0.9185,
+      "recall@0.5": 0.9752,
+      "ap@[0.5:0.95]": 0.7598,
+      "aji": 0.882,
+      "merge_rate": 0.0132,
+      "split_rate": 0.0363
+    },
+    {
+      "fg_threshold": 0.6,
+      "seed_threshold": 0.3,
+      "f1@0.5": 0.9239,
+      "precision@0.5": 0.8968,
+      "recall@0.5": 0.9527,
+      "ap@[0.5:0.95]": 0.7459,
+      "aji": 0.873,
+      "merge_rate": 0.0586,
+      "split_rate": 0.0144
+    },
+    {
+      "fg_threshold": 0.6,
+      "seed_threshold": 0.4,
+      "f1@0.5": 0.9338,
+      "precision@0.5": 0.9003,
+      "recall@0.5": 0.9698,
+      "ap@[0.5:0.95]": 0.7592,
+      "aji": 0.8833,
+      "merge_rate": 0.0316,
+      "split_rate": 0.0206
+    },
+    {
+      "fg_threshold": 0.6,
+      "seed_threshold": 0.5,
+      "f1@0.5": 0.9396,
+      "precision@0.5": 0.9049,
+      "recall@0.5": 0.9772,
+      "ap@[0.5:0.95]": 0.7628,
+      "aji": 0.8863,
+      "merge_rate": 0.0178,
+      "split_rate": 0.0259
+    },
+    {
+      "fg_threshold": 0.6,
+      "seed_threshold": 0.6,
+      "f1@0.5": 0.9435,
+      "precision@0.5": 0.9101,
+      "recall@0.5": 0.9795,
+      "ap@[0.5:0.95]": 0.7621,
+      "aji": 0.8846,
+      "merge_rate": 0.0118,
+      "split_rate": 0.0328
+    },
+    {
+      "fg_threshold": 0.6,
+      "seed_threshold": 0.7,
+      "f1@0.5": 0.9459,
+      "precision@0.5": 0.9184,
+      "recall@0.5": 0.9751,
+      "ap@[0.5:0.95]": 0.7609,
+      "aji": 0.8827,
+      "merge_rate": 0.0126,
+      "split_rate": 0.0363
+    }
+  ]
+}
