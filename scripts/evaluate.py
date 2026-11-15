@@ -4,6 +4,7 @@
     python scripts/evaluate.py --method otsu_watershed --split test
     python scripts/evaluate.py --method otsu_components --split test --limit 20
     python scripts/evaluate.py --method model --checkpoint checkpoints/unet_dist/best.pth --split test
+    python scripts/evaluate.py --method model --checkpoint checkpoints/unet_dist/best.pth --split test --tuned
 
 Результаты: results/metrics/<method>_<split>.json и .csv (по снимкам).
 Пара примеров с наложением предсказания: results/metrics/examples/.
@@ -67,6 +68,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", required=True, choices=sorted(METHODS) + ["model"])
     parser.add_argument("--checkpoint", default="", help="путь к чекпоинту (для --method model)")
+    parser.add_argument("--tuned", action="store_true",
+                        help="взять пороги постобработки, подобранные на val (results/tuning/<run>_val.json)")
     parser.add_argument("--split", default="test", choices=["train", "val", "test"])
     parser.add_argument("--limit", type=int, default=0, help="взять только первые N снимков (для быстрой проверки)")
     args = parser.parse_args()
@@ -89,8 +92,20 @@ def main():
         model, config = load_checkpoint(args.checkpoint, device)
         method_name = config["run_name"]
 
+        fg_threshold = 0.5
+        seed_threshold = 0.5
+        if args.tuned:
+            tuning_path = ROOT / "results" / "tuning" / (method_name + "_val.json")
+            with open(tuning_path) as f:
+                best = json.load(f)["best"]
+            fg_threshold = best["fg_threshold"]
+            seed_threshold = best["seed_threshold"]
+            method_name = method_name + "_tuned"
+            print("Пороги с val: fg =", fg_threshold, "| seed =", seed_threshold)
+
         def method(image):
-            return segment(model, image, device, postprocess=config["postprocess"])
+            return segment(model, image, device, postprocess=config["postprocess"],
+                           fg_threshold=fg_threshold, seed_threshold=seed_threshold)
     else:
         method = METHODS[args.method]
     out_dir = OUT_DIR
