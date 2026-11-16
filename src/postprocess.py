@@ -19,7 +19,7 @@ def components(fg_prob, fg_threshold=0.5):
 
 
 def distance_watershed(fg_prob, dist, fg_threshold=0.5, seed_threshold=0.5):
-    """Наш метод: маркеры из карты расстояний + watershed.
+    """Метод с картой расстояний: маркеры из карты расстояний + watershed.
 
     1. Маска клеток: fg_prob > fg_threshold.
     2. Маркеры (центры клеток): dist > seed_threshold.

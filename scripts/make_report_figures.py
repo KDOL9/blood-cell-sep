@@ -38,8 +38,8 @@ METHODS = [
     ("otsu_watershed", "Otsu + watershed"),
     ("unet_mask_only", "U-Net (только маска)"),
     ("cellpose", "Cellpose-SAM (без дообучения)"),
-    ("unet_dist_synth_tuned", "Наш метод + синтетика"),
-    ("unet_dist_tuned", "Наш метод (U-Net + карта расстояний)"),
+    ("unet_dist_synth_tuned", "U-Net + карта расстояний + синтетика"),
+    ("unet_dist_tuned", "U-Net + карта расстояний"),
 ]
 
 COLUMNS = [
@@ -245,7 +245,7 @@ def make_comparisons(n_images, crop_size):
         cellpose_path = cellpose_dir / (stem + ".png")
         if cellpose_path.exists():
             panels.append(("Cellpose-SAM", None, np.array(Image.open(cellpose_path)).astype(np.int32)))
-        panels.append(("Наш метод", None,
+        panels.append(("U-Net + карта расстояний", None,
                        segment(model_dist, image, device, postprocess=config_dist["postprocess"],
                                fg_threshold=best["fg_threshold"], seed_threshold=best["seed_threshold"])))
 
