@@ -81,9 +81,16 @@ def apply_ignore(gt, pred, ignore_ids):
     return relabel(gt_clean), relabel(pred_clean)
 
 
-def border_ids(labels):
-    """Номера клеток, касающихся края снимка."""
-    edge = np.concatenate([labels[0, :], labels[-1, :], labels[:, 0], labels[:, -1]])
+BORDER_MARGIN = 3  # клетка «у края», если подходит к нему ближе чем на столько пикселей
+
+
+def border_ids(labels, margin=0):
+    """Номера клеток, касающихся края снимка (или подходящих к нему ближе чем на margin пикселей)."""
+    m = margin + 1
+    edge = np.concatenate([
+        labels[:m, :].ravel(), labels[-m:, :].ravel(),
+        labels[:, :m].ravel(), labels[:, -m:].ravel(),
+    ])
     ids = np.unique(edge)
     return ids[ids > 0]
 
@@ -94,18 +101,29 @@ def remove_border_objects(gt, pred):
     Клетки, обрезанные краем кадра, в BBBC041Seg размечены непоследовательно:
     часть есть в разметке, часть нет. Поэтому:
       - из разметки удаляем все клетки, касающиеся края;
-      - из предсказания удаляем пятно у края, только если оно не накрывает больше
+      - предсказанную клетку считаем «краевой», если она подходит к краю ближе чем на
+        BORDER_MARGIN пикселей (разные методы по-разному обводят клетку у самого края)
+        или больше чем наполовину лежит на удалённой краевой клетке разметки;
+      - краевую предсказанную клетку удаляем, только если она не накрывает больше
         половины ни одной из оставшихся (внутренних) размеченных клеток.
     Так удаляются неразмеченные и обрезанные клетки у края, но большое склеенное пятно,
     которое задело край и при этом накрывает внутренние клетки, остаётся
     и честно учитывается как склейка.
     """
+    gt_border = np.isin(gt, border_ids(gt))
     gt_clean = gt.copy()
-    gt_clean[np.isin(gt, border_ids(gt))] = 0
+    gt_clean[gt_border] = 0
+
+    pred_area = np.bincount(pred.ravel())
+    on_removed_gt = np.bincount(pred[gt_border].ravel(), minlength=len(pred_area))
+    candidates = set(border_ids(pred, BORDER_MARGIN).tolist())
+    for label in range(1, len(pred_area)):
+        if pred_area[label] > 0 and on_removed_gt[label] > 0.5 * pred_area[label]:
+            candidates.add(label)
 
     inter, gt_area, _ = overlap_matrix(gt_clean, pred)
     drop = []
-    for label in border_ids(pred):
+    for label in sorted(candidates):
         covers_interior_cell = False
         if inter.shape[0] > 0 and label - 1 < inter.shape[1]:
             covers_interior_cell = bool((inter[:, label - 1] > 0.5 * gt_area).any())
