@@ -21,3 +21,6 @@ venv/
 .vscode/
 .idea/
 .DS_Store
+
+# Сырые предсказания (большие, пересоздаются скриптами)
+results/predictions/
