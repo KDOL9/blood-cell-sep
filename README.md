@@ -57,6 +57,32 @@ python scripts/check_env.py
 
 На Mac должно показать `Устройство: mps`, на ПК — `Устройство: cuda` и название видеокарты.
 
+## Результаты
+
+Тестовая выборка: 199 снимков BBBC041Seg, клетки у края снимка исключены (11 500 клеток).
+Полные таблицы — `results/figures/tables.md`.
+
+| Метод | F1@0.5 | AP[.5:.95] | AJI | Склеено | Разрезано | Время на снимок |
+|---|---|---|---|---|---|---|
+| Otsu + watershed | 0.874 | 0.622 | 0.755 | 14.8% | 1.4% | 0.44 с |
+| U-Net (только маска) | 0.747 | 0.494 | 0.603 | 39.8% | 0.0% | 0.30 с |
+| Cellpose-SAM (без дообучения) | 0.972 | 0.806 | 0.900 | 1.6% | 1.3% | 8.58 с |
+| **U-Net + карта расстояний** | **0.967** | **0.781** | **0.895** | **1.3%** | **3.1%** | **0.38 с** |
+
+![Сравнение методов на плотном участке](results/figures/comparison_0.png)
+
+## Воспроизведение
+
+```bash
+python scripts/download_bbbc041seg.py          # данные
+python scripts/make_split.py                    # разбиение (уже в configs/)
+python scripts/eda.py                           # анализ данных
+python scripts/train.py --config configs/unet_dist.yaml
+python scripts/tune_postprocess.py --checkpoint checkpoints/unet_dist/best.pth
+python scripts/evaluate.py --method model --checkpoint checkpoints/unet_dist/best.pth --split test --tuned --exclude-border
+python scripts/make_report_figures.py           # таблицы и рисунки
+```
+
 ## Рабочий процесс
 
 - Код пишется на Mac → `git push`.
