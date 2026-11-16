@@ -82,9 +82,3 @@ python scripts/tune_postprocess.py --checkpoint checkpoints/unet_dist/best.pth
 python scripts/evaluate.py --method model --checkpoint checkpoints/unet_dist/best.pth --split test --tuned --exclude-border
 python scripts/make_report_figures.py           # таблицы и рисунки
 ```
-
-## Рабочий процесс
-
-- Код пишется на Mac → `git push`.
-- Обучение на ПК: `git pull` → скачивание данных скриптом → запуск обучения.
-- Данные и веса моделей в git не хранятся.
