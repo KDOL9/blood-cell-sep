@@ -10,7 +10,7 @@ from scipy import ndimage as ndi
 from skimage.color import rgb2gray
 from skimage.feature import peak_local_max
 from skimage.filters import threshold_otsu
-from skimage.morphology import binary_opening, disk, remove_small_objects
+from skimage.morphology import disk, opening, remove_small_objects
 from skimage.segmentation import watershed
 
 MIN_AREA = 200
@@ -29,7 +29,7 @@ def foreground_mask(image):
     # У эритроцитов светлый центр — Otsu может сделать в нём «дырку». Заливаем.
     mask = ndi.binary_fill_holes(mask)
     # Размыкание убирает тонкие «мостики» и мелкий мусор
-    mask = binary_opening(mask, disk(3))
+    mask = opening(mask, disk(3))
     mask = remove_small_objects(mask, max_size=MIN_AREA - 1)
     return mask
 

@@ -174,20 +174,32 @@ def colorize(labels, seed=0):
 
 
 def densest_crop(labels, size):
-    """Окно size×size с наибольшим числом клеток, касающихся соседей."""
+    """Левый верхний угол окна size×size с наибольшим числом касающихся клеток.
+
+    Координаты всегда зажимаются в границы снимка, чтобы окно не вышло за край.
+    """
     from scipy import ndimage as ndi
 
-    neighbor_max = ndi.maximum_filter(labels, size=5)
-    touching = (labels > 0) & (neighbor_max != labels) & (neighbor_max > 0)
-    density = ndi.uniform_filter(touching.astype(np.float32), size=size)
     height, width = labels.shape
+    size = min(size, height, width)
     half = size // 2
-    density[:half, :] = 0
-    density[-half:, :] = 0
-    density[:, :half] = 0
-    density[:, -half:] = 0
-    cy, cx = np.unravel_index(int(density.argmax()), density.shape)
-    return cy - half, cx - half
+
+    # Касание: рядом есть клетка с другим номером (в том числе через тонкую линию фона)
+    neighbor_max = ndi.maximum_filter(labels, size=5)
+    big = np.iinfo(np.int32).max
+    neighbor_min = ndi.minimum_filter(np.where(labels > 0, labels, big), size=5)
+    touching = (labels > 0) & ((neighbor_max != labels) | (neighbor_min != labels)) & (neighbor_min != big)
+    density = ndi.uniform_filter(touching.astype(np.float32), size=size)
+
+    if density.max() > 0:
+        cy, cx = np.unravel_index(int(density.argmax()), density.shape)
+    else:
+        cy = height // 2
+        cx = width // 2
+
+    y0 = int(np.clip(cy - half, 0, height - size))
+    x0 = int(np.clip(cx - half, 0, width - size))
+    return y0, x0, size
 
 
 def make_comparisons(n_images, crop_size):
@@ -237,20 +249,19 @@ def make_comparisons(n_images, crop_size):
                        segment(model_dist, image, device, postprocess=config_dist["postprocess"],
                                fg_threshold=best["fg_threshold"], seed_threshold=best["seed_threshold"])))
 
-        y0, x0 = densest_crop(gt, crop_size)
-        fig, axes = plt.subplots(1, len(panels), figsize=(3.2 * len(panels), 3.6))
+        y0, x0, size = densest_crop(gt, crop_size)
+        fig, axes = plt.subplots(1, len(panels), figsize=(3.2 * len(panels), 4.0), layout="constrained")
         for ax, (title, picture, labels) in zip(axes, panels):
             if picture is not None:
-                shown = picture[y0:y0 + crop_size, x0:x0 + crop_size]
+                shown = picture[y0:y0 + size, x0:x0 + size]
             else:
-                crop = labels[y0:y0 + crop_size, x0:x0 + crop_size]
+                crop = labels[y0:y0 + size, x0:x0 + size]
                 count = len(np.unique(crop)) - 1
                 shown = colorize(crop, seed=index)
                 title = title + "\n" + str(count) + " объектов"
             ax.imshow(shown)
             ax.set_title(title, fontsize=10)
             ax.axis("off")
-        fig.tight_layout()
         fig.savefig(OUT_DIR / ("comparison_" + str(index) + ".png"), dpi=130)
         plt.close(fig)
         print("Сохранено сравнение:", stem[:8])
